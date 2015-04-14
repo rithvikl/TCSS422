@@ -25,7 +25,7 @@ void drive_multiply() {
 }
 
 void drive_rotate() {
-	char message[] = "Hello";
+	char message[] = "hello";
  	int i;
 	for (i = 0; i <= 10; i++) {
 		char * tmp = rotate(message, i);
