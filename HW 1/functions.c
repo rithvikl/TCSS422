@@ -121,6 +121,11 @@ void initializeAndShuffleDeck(struct Card deck[52]) {
    }
 }
 
+typedef struct state {
+   int curBoard[4][4]
+
+} State;
+
 struct ListNode * findWords(const char board[4][4]) {
   
  
