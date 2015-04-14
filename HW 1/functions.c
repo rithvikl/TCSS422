@@ -122,7 +122,8 @@ void initializeAndShuffleDeck(struct Card deck[52]) {
 }
 
 struct ListNode * findWords(const char board[4][4]) {
-   
+  
+ 
    struct ListNode *front = malloc(sizeof(struct ListNode));
    struct ListNode *prev = malloc(sizeof(struct ListNode));
    char *cur = malloc(17); //should be dynamic
@@ -134,7 +135,7 @@ struct ListNode * findWords(const char board[4][4]) {
       }
    }
 //   struct ListNode *test = malloc(sizeof(struct ListNode));
-//   test->word = "hello";
+//   test->word = "poop";
 //   test->next = NULL;
 //   return test;
    return front;
@@ -186,7 +187,7 @@ void recurse(const char board[4][4], char *current, int row, int col, struct Lis
       if(!isWord(current) && !isPrefix(current)) {
          int i = 0;
          while(current[i] != '\0') i++;
-         current[i-2] = '\0';
+         current[i-1] = '\0';
       }
    }
 }
