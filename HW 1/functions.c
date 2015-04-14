@@ -189,5 +189,4 @@ void recurse(const char board[4][4], char *current, int row, int col, struct Lis
          current[i-2] = '\0';
       }
    }
-   return current; 
 }
