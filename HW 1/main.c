@@ -63,14 +63,14 @@ void drive_findWords() {
 		printf("%s\n", current->word);
 		current = current->next;
 	}
-/*	current = words;
+	current = words;
 	while (current != NULL) {
 		words = current->next;
 		free(current->word);
 		free(current);
 		current = words;
 	}
-*/	destroyLexicon();
+	destroyLexicon();
 }
 
 int main(int argc, char* argv[]) {

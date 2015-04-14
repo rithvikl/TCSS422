@@ -35,7 +35,7 @@ void multiply(int num1, int denom1, int num2, int denom2, int * rNum, int * rDen
    }
 }
 
-//Issues with amount = 5 and 10
+//Issues with amount = 5 and 10 TODO
 char * rotate(const char * str, int amount) {
 
    char *copy = malloc(sizeof(str)); 
@@ -78,7 +78,7 @@ int readAndDisplayBookInformation(const char * path) {
    return 0;   
 }
 
-//How to get random with no duplicates?
+//How to get random with no duplicates? TODO
 void initializeAndShuffleDeck(struct Card deck[52]) {
 
    time_t now;
@@ -110,7 +110,6 @@ void initializeAndShuffleDeck(struct Card deck[52]) {
             case 2: temp->suit = 'h'; break;
             case 3: temp->suit = 's'; break;
          }
-//            printf("%d, %d, %c%c ", i, j, temp->rank, temp->suit);
          rNum = rand() % 51;
          while(deck[rNum].suit == 'c' && deck[rNum].suit == 'd' && deck[rNum].suit == 'h' && deck[rNum].suit == 's') {
             rNum = rNum + 1;
@@ -121,38 +120,58 @@ void initializeAndShuffleDeck(struct Card deck[52]) {
    }
 }
 
-typedef struct state {
-   int curBoard[4][4]
-
-} State;
-
 struct ListNode * findWords(const char board[4][4]) {
-  
  
+//   printf("here"); 
    struct ListNode *front = malloc(sizeof(struct ListNode));
    struct ListNode *prev = malloc(sizeof(struct ListNode));
-   char *cur = malloc(17); //should be dynamic
+   char *cur = (char*)malloc(17*sizeof(char)); //TODO should be dynamic
+   State curState = (State) malloc(sizeof(State));
+   int x, y;
+   for(x = 0; x < 4; x++) {
+      for(y = 0; y < 4; y++) {
+         curState->curBoard[x][y] = 0;
+      } 
+   }
+
    int i, j;
    for(i = 0; i < 4; i++) {
       for(j = 0; j < 4; j++) {
-         cur[0] = board[i][j]; 
-         recurse(board, cur, i, j, front, prev); 
+//         printf("here");
+         cur[0] = board[i][j];
+         curState->curWord = cur;
+         curState->curBoard[i][j] = 1;
+//         recurse(board, cur, i, j, front, prev, curState);
+
+         //clear state board
+         int x, y;
+         for(x = 0; x < 4; x++) {
+            for(y = 0; y < 4; y++) {
+               curState->curBoard[x][y] = 0;
+            } 
+         } 
       }
    }
 //   struct ListNode *test = malloc(sizeof(struct ListNode));
-//   test->word = "poop";
+//   test->word = "hello";
 //   test->next = NULL;
 //   return test;
    return front;
 }
 
-void recurse(const char board[4][4], char *current, int row, int col, struct ListNode *front, struct ListNode *prev) {
+void recurse(const char board[4][4], char *current, int row, int col, struct ListNode *front, struct ListNode *prev, State curState) {
 
-//   printf("%s\n", current);
-   if(current != NULL) {
+   if(!isWord(current) && !isPrefix(current)) {
+//      printf("here"); 
+      int i = 0;
+      while(current[i] != '\0') i++;
+      current[i-1] = '\0';
+      curState->curBoard[row][col] = 0;
+   } else {
       if(isWord(current)) {
          struct ListNode *temp = malloc(sizeof(struct ListNode));
          temp->word = current;
+         temp->next = NULL;
          if(front == NULL) {
             front = temp;
             prev = temp;
@@ -163,36 +182,49 @@ void recurse(const char board[4][4], char *current, int row, int col, struct Lis
       }
 
       if(isPrefix(current)) {
+ //        printf("here");
          if(col < 3) {
-            strcat(current, &board[row][col+1]);
-            recurse(board, current, row, col+1, front, prev);
+            if(curState->curBoard[row][col+1] == 0) {
+               strcat(current, &board[row][col+1]);
+               curState->curBoard[row][col+1] = 1;
+               recurse(board, current, row, col+1, front, prev, curState);
+            }
          }
          if(row < 3) {
-            strcat(current, &board[row+1][col]);
-            recurse(board, current, row+1, col, front, prev);
+            if(curState->curBoard[row+1][col] == 0) {
+               strcat(current, &board[row+1][col]);
+               curState->curBoard[row+1][col] = 1;
+               recurse(board, current, row+1, col, front, prev, curState);
+            }
          }
          if(row < 3 && col < 3) {
-            strcat(current, &board[row+1][col+1]);
-            recurse(board, current, row+1, col+1, front, prev);
+            if(curState->curBoard[row+1][col+1] == 0) {
+               strcat(current, &board[row+1][col+1]);
+               curState->curBoard[row+1][col+1] = 1;
+               recurse(board, current, row+1, col+1, front, prev, curState);
+            }
          }
          if(col > 0) {
-            strcat(current, &board[row][col-1]);
-            recurse(board, current, row, col-1, front, prev);
+            if(curState->curBoard[row][col-1] == 0) {
+               strcat(current, &board[row][col-1]);
+               curState->curBoard[row][col-1] = 1;
+               recurse(board, current, row, col-1, front, prev, curState);
+            }
          }
          if(row > 0) {
-            strcat(current, &board[row-1][col]);
-            recurse(board, current, row-1, col, front, prev);
+            if(curState->curBoard[row-1][col] == 0) {
+               strcat(current, &board[row-1][col]);
+               curState->curBoard[row-1][col] = 1;
+               recurse(board, current, row-1, col, front, prev, curState);
+            }
          }
          if(row > 0 && col > 0) {
-            strcat(current, &board[row-1][col-1]);
-            recurse(board, current, row-1, col-1, front, prev);
+            if(curState->curBoard[row-1][col-1] == 0) {
+               strcat(current, &board[row-1][col-1]);
+               curState->curBoard[row-1][col-1] = 1;
+               recurse(board, current, row-1, col-1, front, prev, curState);
+            } 
          }
-      }
-
-      if(!isWord(current) && !isPrefix(current)) {
-         int i = 0;
-         while(current[i] != '\0') i++;
-         current[i-1] = '\0';
       }
    }
 }
