@@ -75,10 +75,10 @@ void drive_findWords() {
 
 int main(int argc, char* argv[]) {
 	srand(time(NULL));
-//	drive_multiply();
-//	drive_rotate();
-//	drive_readAndDisplayBookInformation();
-//	drive_initializeAndShuffleDeck();
+	drive_multiply();
+	drive_rotate();
+	drive_readAndDisplayBookInformation();
+	drive_initializeAndShuffleDeck();
 	drive_findWords();
 	return EXIT_SUCCESS;
 }
