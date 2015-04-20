@@ -13,7 +13,7 @@ typedef struct params {
 } Params;
 
 Params *p;
-pthread_mutex_t lock;
+//pthread_mutex_t lock;
 
 int isPal(char *word) {
 
@@ -59,6 +59,7 @@ char ** multithreaded_findPalindromes(char ** words, int numOfWords, int * palin
 
 //   char **foundPals = malloc(sizeof(**words));
    char *foundPals[numOfWords];// = malloc(sizeof(**words));
+//   char **foundPals = malloc(sizeof(words));
 //   *foundPals = malloc(sizeof(*words));
 //   foundPals = malloc(sizeof(words));
 
@@ -92,11 +93,11 @@ char ** multithreaded_findPalindromes(char ** words, int numOfWords, int * palin
    for(x = 0; x < numThreads; x++) {
       pthread_join(t[x], NULL);
    }
-*/
 
+*/
    
    *foundPals = *p->f;
-   palindromesFound = &(p->pf);
+   palindromesFound = &p->pf;
    int i;
    for(i = 0; i < 38; i++){
       printf("%s\n", foundPals[i]);
