@@ -13,7 +13,6 @@ typedef struct params {
 } Params;
 
 Params *p;
-//pthread_mutex_t lock;
 
 int isPal(char *word) {
 
@@ -27,50 +26,40 @@ int isPal(char *word) {
 
 void *run(void* s) {
 
-   //printf("numWords: %d, palsFound: %d, start: %d\n", p->n, *p->pf, p->start);
-//   pthread_mutex_lock(&lock);
    int start = (int) s;
    int end = start + (p->n/p->nT);
 
-   printf("%d - %d\n", start, end);
+//   printf("%d - %d\n", start, end);
 
-   //Checks start of each twice
+   
    int k, count = 0;
    for(k = start; k < end; k++) {
       if(isPal((p->w)[k])) {
-//         pthread_mutex_lock(&lock);
-//         printf("%d\n", (p->pf)+count);
+         /* TODO: p->w is an array of arrays, p->f is an array of arrays.
+            So the next line should take the word thats in p->w and
+            put it in p->f. After the first few, I get a seg fault. Is that
+            because of the **foundPals malloc in multithreaded_palindromes?
+            */
          (p->f)[(p->pf)+count] = (p->w)[k];
-//         printf("%s\n", (p->f)[(p->pf)+count]);
          count++;
-//         pthread_mutex_unlock(&lock);
-//         count++;
       }
 
    }
    p->pf += count;
-   printf("palsFound = %d\n", p->pf);
-//   pthread_mutex_unlock(&lock);
+//   printf("palsFound = %d\n", p->pf);
    return NULL;
 }
 
 //should find 38 palindromes
 char ** multithreaded_findPalindromes(char ** words, int numOfWords, int * palindromesFound, int numThreads) {
 
-//   char **foundPals = malloc(sizeof(**words));
-   char *foundPals[numOfWords];// = malloc(sizeof(**words));
-//   char **foundPals = malloc(sizeof(words));
-//   *foundPals = malloc(sizeof(*words));
-//   foundPals = malloc(sizeof(words));
+   if(words == NULL) return NULL;
+
+   // I think this malloc is the problem?
+   char **foundPals = malloc(sizeof(words[0])*numOfWords);
 
    pthread_t t[numThreads];
    
-//   if(pthread_mutex_init(&lock, NULL) != 0) {
-//      printf("Mutex init failed.\n");
-//      return NULL;
-//   }
-
-   //create struct to pass mult params?
    p = malloc(sizeof(Params));
    p->w = words;
    p->n = numOfWords;
@@ -81,6 +70,8 @@ char ** multithreaded_findPalindromes(char ** words, int numOfWords, int * palin
    int x, rc, start = 0;
    for(x = 0; x < numThreads; x++) {
       start = x * (numOfWords/numThreads);
+      // TODO: Casting start to (void*) gives a warning, but idk how to
+      // pass to thread function without casting it?
       rc = pthread_create(&t[x], NULL, run, (void*)start);
       if(rc != 0) {
          printf("ERROR: unable to create new thread.\n");
@@ -89,20 +80,14 @@ char ** multithreaded_findPalindromes(char ** words, int numOfWords, int * palin
       pthread_join(t[x], NULL);
    }
 
-/*
-   for(x = 0; x < numThreads; x++) {
-      pthread_join(t[x], NULL);
-   }
-
-*/
    
-   *foundPals = *p->f;
+   foundPals = p->f;
    palindromesFound = &p->pf;
    int i;
    for(i = 0; i < 38; i++){
-      printf("%s\n", foundPals[i]);
+        printf("%s\n", *foundPals+i);
    }
-   printf("%d\n", *palindromesFound);
+//   printf("%d\n", *palindromesFound);
 
    return foundPals;
 }
