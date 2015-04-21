@@ -56,7 +56,9 @@ char ** multithreaded_findPalindromes(char ** words, int numOfWords, int * palin
    if(words == NULL) return NULL;
 
    // I think this malloc is the problem?
-   char **foundPals = malloc(sizeof(words[0])*numOfWords);
+//   char **foundPals = malloc(sizeof(words[0])*numOfWords);
+   char **foundPals = malloc(sizeof(char*)*numOfWords);
+   if(foundPals == NULL) return NULL;
 
    pthread_t t[numThreads];
    
