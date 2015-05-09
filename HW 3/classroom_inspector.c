@@ -1,26 +1,238 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include "classroom_inspector.h"
 #include "util.h"
 
 typedef struct results {
   char **urls;
+  char **pages;
   char **m_times;
   char **m_classes;
+  int mon;
   char **t_times;
   char **t_classes;
+  int tue;
   char **w_times;
   char **w_classes;
+  int wed;
   char **th_times;
   char **th_classes;
+  int thu;
   char **f_times;
   char **f_classes;
+  int fri;
   int page_count;
+  char *comp;
+  const char *build;
+  const char *room;
+  int r_threads;
+  int a_threads;
+  int remain;
 } Results;
 
 Results *r;
 
+pthread_mutex_t lock;
+
+void pause() {
+
+   int p;
+   for(p = 0; p < 20000000; p++);
+}
+
+void *get_info (char *parse_page) {
+
+   char *name_getter = parse_page;
+   while(strncmp(name_getter, "NAME=", 5) != 0) name_getter--;
+   while(strncmp(name_getter, ">", 1) != 0) name_getter++;
+   name_getter++;
+
+   int n = 0;
+   char *temp_count = name_getter;
+   while(strncmp(temp_count, "&", 1) != 0) {
+      n++;
+      temp_count++;
+   }
+
+   char *class_name = calloc(1, 11*sizeof(char));
+   strncat(class_name, name_getter, n);
+   strcat(class_name, " ");
+
+   while(strncmp(name_getter, "&nbsp", 5) != 0) name_getter++;
+   while(strncmp(name_getter, " ", 1) != 0) name_getter++;
+   name_getter++;
+
+   strncat(class_name, name_getter, 3);
+                        
+   char *time_getter = parse_page;
+   time_getter -= 11;
+
+   char *time_slot = calloc(1, 12*sizeof(char));
+   strncat(time_slot, time_getter, 10);
+
+   char *day_checker = parse_page;
+   day_checker -= 18;
+
+   int k;
+   for(k = 0; k < 6; k++) {
+      if(strncmp(day_checker, "M", 1) == 0) {
+         if(r->mon > 0) {
+            if(strcmp((r->m_times)[r->mon -1], time_slot) == 0 && 
+                strcmp((r->m_classes)[r->mon -1], class_name) == 0) continue;
+         }
+         (r->m_times)[r->mon] = time_slot;
+         (r->m_classes)[r->mon] = class_name;
+         (r->mon)++;
+      } else if (strncmp(day_checker, "T", 1) == 0) {
+         if(strncmp(day_checker, "Th", 2) == 0) {
+            if(r->thu > 0) {
+               if(strcmp((r->th_times)[r->thu -1], time_slot) == 0 && 
+                   strcmp((r->th_classes)[r->thu -1], class_name) == 0) continue;
+            }
+            (r->th_times)[r->thu] = time_slot;
+            (r->th_classes)[r->thu] = class_name;
+            (r->thu)++;
+         } else {
+            if(r->tue > 0) {
+               if(strcmp((r->t_times)[r->tue -1], time_slot) == 0 && 
+                   strcmp((r->t_classes)[r->tue -1], class_name) == 0) continue;
+            }
+            (r->t_times)[r->tue] = time_slot;
+            (r->t_classes)[r->tue] = class_name;
+            (r->tue)++;
+         }
+      } else if (strncmp(day_checker, "W", 1) == 0) {
+         if(r->wed > 0) {
+            if(strcmp((r->w_times)[r->wed -1], time_slot) == 0 && 
+                strcmp((r->w_classes)[r->wed -1], class_name) == 0) continue;
+         }
+         (r->w_times)[r->wed] = time_slot;
+         (r->w_classes)[r->wed] = class_name;
+         (r->wed)++;
+      } else if (strncmp(day_checker, "F", 1) == 0) {
+         if(r->fri > 0) {
+            if(strcmp((r->f_times)[r->fri -1], time_slot) == 0 && 
+                strcmp((r->f_classes)[r->fri -1], class_name) == 0) continue;
+         }
+         (r->f_times)[r->fri] = time_slot;
+         (r->f_classes)[r->fri] = class_name;
+         (r->fri)++;
+      }
+      day_checker++;
+   }
+   return NULL;
+}
+
+void *find_room(void* id) {
+
+   char *parse_page;
+   int i, t_num = *((int*)id);
+   int start = t_num * ((r->page_count) / (r->a_threads));
+   int end = start + ((r->page_count) / (r->a_threads)) - 1;
+
+   for(i = start; i <= end; i++) {
+
+      parse_page = (r->pages)[i];
+      while(strncasecmp(parse_page, "Created by", 10) != 0) {
+
+         if(strcasecmp(r->build, "ADMC") == 0 || strcasecmp(r->build, "WGB") == 0) {
+            if(strncasecmp(parse_page, r->comp, 11) == 0) {
+               get_info(parse_page);
+            }
+         } else {
+            if(strncasecmp(parse_page, r->comp, 8) == 0) {
+               get_info(parse_page);
+            }
+         }
+         parse_page++;
+      }
+   }
+
+   pthread_mutex_lock(&lock);
+   if(r->remain != 0) {
+      parse_page = (r->pages)[(r->page_count)-(r->remain)];
+      (r->remain)--;
+      
+      while(strncasecmp(parse_page, "Created by", 10) != 0) {
+
+         if(strcasecmp(r->build, "ADMC") == 0 || strcasecmp(r->build, "WGB") == 0) {
+            if(strncasecmp(parse_page, r->comp, 11) == 0) {
+               get_info(parse_page);
+            }
+         } else {
+            if(strncasecmp(parse_page, r->comp, 8) == 0) {
+               get_info(parse_page);
+            }
+         }
+         parse_page++;
+      }
+             
+   }
+   pthread_mutex_unlock(&lock);
+   return NULL;
+}
+
+void *download_pages(void* id) {
+
+   char *page;
+   int i, t_num = *((int*)id);
+   int start = t_num * ((r->page_count) / (r->r_threads));
+   int end = start + ((r->page_count) / (r->r_threads)) - 1;
+
+   for(i = start; i <= end; i++) {
+      if ((page = getContent((r->urls)[i])) != NULL) {
+         (r->pages)[i] = page;         
+      }
+   }
+
+   pthread_mutex_lock(&lock);
+   
+   if(r->remain != 0) {
+      if ((page = getContent((r->urls)[(r->page_count)-(r->remain) - 1])) != NULL) {
+         (r->remain)--;
+         (r->pages)[(r->page_count)-(r->remain) - 1] = page;
+          
+      }
+   }
+   pthread_mutex_unlock(&lock);
+   return NULL;
+}
+
+int getNum(char *num) {
+   
+   char *numParse = num;
+   char *res = calloc(1, sizeof(char*));
+   int count = 0;
+   while(strncmp(numParse, "-", 1) != 0) {
+      count++;
+      numParse++;
+   }
+   strncat(res, num, count);
+   int val = atoi(res);
+   if(val < 800) val += 1200;
+   return val;
+}
+
+void sort(char** times, char** classes, int count) {
+
+   int i, j;
+   for(i = 0; i < count - 1; i++) {
+      for(j = 0; j < count - i - 1; j++) {
+         int val1 = getNum(times[j]);
+         int val2 = getNum(times[j+1]);
+         if(val1 > val2) {
+            char *temp = times[j];
+            times[j] = times[j+1];
+            times[j+1] = temp;
+            temp = classes[j];
+            classes[j] = classes[j+1];
+            classes[j+1] = temp;
+         }
+      }
+   }
+}
 
 void inspect_classroom(const char * building, const char * room, const char * time_schedule_url, int retrieval_threads, int analysis_threads) {
 
@@ -34,7 +246,8 @@ void inspect_classroom(const char * building, const char * room, const char * ti
          r = calloc(1, sizeof(Results));
          if(r == NULL) EXIT_FAILURE;
 
-         r->urls = calloc(1, sizeof(char*)*64);
+         r->urls = calloc(1, sizeof(char*)*100);
+         r->pages = calloc(1, sizeof(char*)*100);
          r->m_times = calloc(1, sizeof(char*)*100);
          r->m_classes = calloc(1, sizeof(char*)*100);
          r->t_times = calloc(1, sizeof(char*)*100);
@@ -48,6 +261,8 @@ void inspect_classroom(const char * building, const char * room, const char * ti
 
          char *parse = initial;
 	 r->page_count = 0;
+         r->build = building;
+         r->room = room;
          
          // Parse initial page
 	 while(strncasecmp(parse, "Created by", 10) != 0 && r->page_count < 64) {
@@ -79,188 +294,97 @@ void inspect_classroom(const char * building, const char * room, const char * ti
 	    parse++;
 
 	 }
+                  
+         r->mon = 0; 
+         r->tue = 0;
+         r->wed = 0; 
+         r->thu = 0; 
+         r->fri = 0;
 
-         char *page;
+         r->r_threads = retrieval_threads;
+         r->a_threads = analysis_threads;
 
-         char *comp = calloc(1, 12*sizeof(char));
-         strcat(comp, building);
-         if(strcasecmp(building, "ADMC") == 0) strcat(comp, " ");
-         else strcat(comp, "  ");
-         strcat(comp, room);
-         
-         int mon = 0, tue = 0, wed = 0, thu = 0, fri = 0;
-         
-         // parse downloaded web page
-         int i;
-         for(i = 0; i < r->page_count; i++) {
-	    if ((page = getContent((r->urls)[i])) != NULL) {
+         r->remain = (r->page_count) % (r->r_threads);
+        
+         r->comp = calloc(1, 12*sizeof(char));
+         strcat(r->comp, building);
+         if(strcasecmp(building, "ADMC") == 0) strcat(r->comp, " ");
+         else if(strcasecmp(building, "CP") == 0) strcat(r->comp, "   ");
+         else strcat(r->comp, "  ");
+         strcat(r->comp, room);
 
-               char *parse_page = page;
+         pthread_t thread[retrieval_threads];
+         int rv;
 
-               while(strncasecmp(parse_page, "Created by", 10) != 0) {
-
-                  if(strcasecmp(building, "ADMC") == 0) {
-                     if(strncasecmp(parse_page, comp, 11) == 0) {
-                        // Duplicate code goes here
-                        char *name_getter = parse_page;
-                        while(strncmp(name_getter, "NAME=", 5) != 0) name_getter--;
-                        while(strncmp(name_getter, ">", 1) != 0) name_getter++;
-                        name_getter++;
-
-                        int n = 0;
-                        char *temp_count = name_getter;
-                        while(strncmp(temp_count, "&", 1) != 0) {
-                           n++;
-                           temp_count++;
-                        }
-
-                        char *class_name = calloc(1, 11*sizeof(char));
-                        strncat(class_name, name_getter, n);
-                        strcat(class_name, " ");
-
-                        while(strncmp(name_getter, "&nbsp", 5) != 0) name_getter++;
-                        while(strncmp(name_getter, " ", 1) != 0) name_getter++;
-                        name_getter++;
-
-                        strncat(class_name, name_getter, 3);
-                        
-                        char *time_getter = parse_page;
-                        time_getter -= 11;
-
-                        char *time_slot = calloc(1, 12*sizeof(char));
-                        strncat(time_slot, time_getter, 10);
-
-                        char *day_checker = parse_page;
-                        day_checker -= 18;
-
-                        int k;
-                        for(k = 0; k < 6; k++) {
-                           // T LIT 200 is listed twice on time schedule
-                           if(strncmp(day_checker, "M", 1) == 0) {
-                              (r->m_times)[mon] = time_slot;
-                              (r->m_classes)[mon] = class_name;
-                              mon++;
-                           } else if (strncmp(day_checker, "T", 1) == 0) {
-                              if(strncmp(day_checker, "Th", 2) == 0) {
-                                 (r->t_times)[tue] = time_slot;
-                                 (r->t_classes)[tue] = class_name;
-                                 tue++;
-                              } else {
-                                 (r->th_times)[thu] = time_slot;
-                                 (r->th_classes)[thu] = class_name;
-                                 thu++;
-                              }
-                           } else if (strncmp(day_checker, "W", 1) == 0) {
-                              (r->w_times)[wed] = time_slot;
-                              (r->w_classes)[wed] = class_name;
-                              wed++;
-                           } else if (strncmp(day_checker, "F", 1) == 0) {
-                              (r->f_times)[fri] = time_slot;
-                              (r->f_classes)[fri] = class_name;
-                              fri++;
-                           }
-                           day_checker++;
-                        }
-                     }
-                  } else {
-                     if(strncasecmp(parse_page, comp, 8) == 0) { 
-                        // Duplicate code goes here
-                        char *name_getter = parse_page;
-                        while(strncmp(name_getter, "NAME=", 5) != 0) name_getter--;
-                        while(strncmp(name_getter, ">", 1) != 0) name_getter++;
-                        name_getter++;
-
-                        int n = 0;
-                        char *temp_count = name_getter;
-                        while(strncmp(temp_count, "&", 1) != 0) {
-                           n++;
-                           temp_count++;
-                        }
-
-                        char *class_name = calloc(1, 11*sizeof(char));
-                        strncat(class_name, name_getter, n);
-                        strcat(class_name, " ");
-
-                        while(strncmp(name_getter, "&nbsp", 5) != 0) name_getter++;
-//                        name_getter+=6;
-                        while(strncmp(name_getter, " ", 1) != 0) name_getter++;
-                        name_getter++;
-
-                        strncat(class_name, name_getter, 3);
-                        
-//                        printf("%s\n", class_name);
-
-                        char *time_getter = parse_page;
-                        time_getter -= 11;
-
-                        char *time_slot = calloc(1, 12*sizeof(char));
-                        strncat(time_slot, time_getter, 10);
-//                        printf("%s\n", time_slot);
-
-                        char *day_checker = parse_page;
-                        day_checker -= 18;
-//                        printf("%.6s\n", day_checker);
-
-                        int k;
-                        for(k = 0; k < 6; k++) {
-                           // T LIT classes always getting added twice
-                           if(strncmp(day_checker, "M", 1) == 0) {
-                              (r->m_times)[mon] = time_slot;
-                              (r->m_classes)[mon] = class_name;
-                              mon++;
-                           } else if (strncmp(day_checker, "T", 1) == 0) {
-                              if(strncmp(day_checker, "Th", 2) == 0) {
-                                 (r->t_times)[tue] = time_slot;
-                                 (r->t_classes)[tue] = class_name;
-                                 tue++;
-                              } else {
-                                 (r->th_times)[thu] = time_slot;
-                                 (r->th_classes)[thu] = class_name;
-                                 thu++;
-                              }
-                           } else if (strncmp(day_checker, "W", 1) == 0) {
-                              (r->w_times)[wed] = time_slot;
-                              (r->w_classes)[wed] = class_name;
-                              wed++;
-                           } else if (strncmp(day_checker, "F", 1) == 0) {
-                              (r->f_times)[fri] = time_slot;
-                              (r->f_classes)[fri] = class_name;
-                              fri++;
-                           }
-                           day_checker++;
-                        }
-                     }
-                  }
-                  parse_page++;
-
-	       }
-	    }
+         rv = pthread_mutex_init(&lock, NULL);
+         if(rv != 0) {
+            printf("Unable to create lock.\n");
+            EXIT_FAILURE;
          }
-         printf("----------------\n");
+
+         // Download pages into array
+         int x;
+         for(x = 0; x < retrieval_threads; x++) {
+            rv = pthread_create(&thread[x], NULL, download_pages, (void*)&x);
+            if(rv != 0) {
+               printf("Unable to create threads.\n");
+               EXIT_FAILURE;
+            }
+            pause();
+         }
+
+         for(x = 0; x < retrieval_threads; x++) {
+            pthread_join(thread[x], NULL);
+         }
+
+         r->remain = (r->page_count) % (r->a_threads);
+
+         // Analyze pages for classroom info
+         for(x = 0; x < analysis_threads; x++) {
+            rv = pthread_create(&thread[x], NULL, find_room, (void*)&x);
+            if(rv != 0) {
+               printf("Unable to create threads.\n");
+               EXIT_FAILURE;
+            }
+            pause();
+         }
+
+         for(x = 0; x < analysis_threads; x++) {
+            pthread_join(thread[x], NULL);
+         }
+         pthread_mutex_destroy(&lock);
+
+         // sort arrays
+         sort(r->m_times, r->m_classes, r->mon);
+         sort(r->t_times, r->t_classes, r->tue);
+         sort(r->w_times, r->w_classes, r->wed);
+         sort(r->th_times, r->th_classes, r->thu);
+         sort(r->f_times, r->f_classes, r->fri);
+         
          printf("Report for %s %s\n\n", building, room);
          if((r->m_times)[0] != NULL) printf("M");
          int z;
-         for(z = 0; z < mon; z++) {
+         for(z = 0; z < r->mon; z++) {
             printf("\t%s\t", (r->m_times)[z]);
             printf("%s\n", (r->m_classes)[z]);
          }
          if((r->t_times)[0] != NULL) printf("T");
-         for(z = 0; z < tue; z++) {
+         for(z = 0; z < r->tue; z++) {
             printf("\t%s\t", (r->t_times)[z]);
             printf("%s\n", (r->t_classes)[z]);
          }
          if((r->w_times)[0] != NULL) printf("W");
-         for(z = 0; z < wed; z++) {
+         for(z = 0; z < r->wed; z++) {
             printf("\t%s\t", (r->w_times)[z]);
             printf("%s\n", (r->w_classes)[z]);
          }
          if((r->th_times)[0] != NULL) printf("Th");
-         for(z = 0; z < thu; z++) {
+         for(z = 0; z < r->thu; z++) {
             printf("\t%s\t", (r->th_times)[z]);
             printf("%s\n", (r->th_classes)[z]);
          }
          if((r->f_times)[0] != NULL) printf("F");
-         for(z = 0; z < fri; z++) {
+         for(z = 0; z < r->fri; z++) {
             printf("\t%s\t", (r->f_times)[z]);
             printf("%s\n", (r->f_classes)[z]);
          }
